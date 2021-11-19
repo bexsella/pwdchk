@@ -7,4 +7,5 @@ Only the first five characters of the SHA1 hash of any passwords entered are sen
 
 ## Reference
 https://www.troyhunt.com/ive-just-launched-pwned-passwords-version-2/
+
 https://haveibeenpwned.com/API/v2
