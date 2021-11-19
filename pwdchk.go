@@ -18,7 +18,7 @@ import (
 const ppUrl = "https://api.pwnedpasswords.com/range/"
 
 // Make request to Pwned Passwords using the ranges API, return slice of
-// strings for each returend entry.
+// strings for each returned entry.
 func MakeRequest(sha1Prefix string) []string {
 	requestUrl := fmt.Sprintf("%s%s", ppUrl, sha1Prefix)
 
@@ -45,7 +45,7 @@ func MakeRequest(sha1Prefix string) []string {
 	} else if resp.StatusCode == 429 {
 		fmt.Fprintf(os.Stderr, "Too many requests, try again retry after %s seconds.\n", resp.Header.Get("Retry-After"))
 	} else {
-		fmt.Fprintf(os.Stderr, "Error %d, encountered.\n", resp.StatusCode)
+		fmt.Fprintf(os.Stderr, "Error %d, recieved from GET request.\n", resp.StatusCode)
 	}
 
 	return nil
