@@ -8,6 +8,8 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -15,15 +17,47 @@ import (
 // pwned passwords api URL
 const ppUrl = "https://api.pwnedpasswords.com/range/"
 
-func MakeRequest(sha1Suffix string) []string {
+// Make request to Pwned Passwords using the ranges API, return slice of
+// strings for each returend entry.
+func MakeRequest(sha1Prefix string) []string {
+	requestUrl := fmt.Sprintf("%s%s", ppUrl, sha1Prefix)
+
+	resp, err := http.Get(requestUrl)
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil
+	}
+
+	if resp.StatusCode == 200 {
+		bytes, err := ioutil.ReadAll(resp.Body)
+
+		if err != nil {
+			fmt.Println(err.Error())
+			return nil
+		}
+
+		// get body as slice of strings.
+		strBody := string(bytes)
+		results := strings.Split(strBody, "\n")
+
+		return results
+	} else if resp.StatusCode == 429 {
+		fmt.Fprintf(os.Stderr, "Too many requests, try again retry after %s seconds.\n", resp.Header.Get("Retry-After"))
+	} else {
+		fmt.Fprintf(os.Stderr, "Error %d, encountered.\n", resp.StatusCode)
+	}
+
 	return nil
 }
 
+// Check the last 35 characters of the password hash against the list of
+// strings.
 func CheckPassword(suffix string, list []string) (found bool, occurances int) {
 	for _, pwdCheck := range list {
-		if strings.Contains(suffix, pwdCheck) {
-			// each returned string is
-			fmt.Sscanf(pwdCheck[:16], "%d", &occurances)
+		if strings.Contains(pwdCheck, suffix) {
+			// each returned string is 35 characters + colon.
+			fmt.Sscanf(pwdCheck[36:], "%d", &occurances)
 			return true, occurances
 		}
 	}
@@ -56,15 +90,12 @@ func main() {
 			found, occurances := CheckPassword(pwdStr[5:], results)
 
 			if found {
-				fmt.Printf("The tested password has been previously compromised %d time(s), and should be considered weak.\n", occurances)
+				fmt.Printf("The tested password has been previously compromised %d time(s)\n", occurances)
 			} else {
-				fmt.Println("Password OK.")
+				fmt.Println("Password not found in HIBP database.")
 			}
-		} else {
-			fmt.Fprintf(os.Stderr, "Request to PP API failed.")
 		}
-
 	} else {
-		fmt.Fprintf(os.Stderr, "Must provide password (plain text or SHA1)")
+		fmt.Fprintf(os.Stderr, "Must provide password (plain text or SHA1)\n")
 	}
 }
